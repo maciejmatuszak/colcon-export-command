@@ -2,6 +2,7 @@
 # Licensed under the Apache License, Version 2.0
 import os
 from datetime import datetime
+from pathlib import Path
 
 from colcon_core.event.command import Command
 from colcon_core.event_handler import EventHandlerExtensionPoint
@@ -11,7 +12,7 @@ from colcon_core.plugin_system import satisfies_version
 import json
 
 
-def createCmakeFileName(command: Command, job: Job) -> str:
+def deduceCmakeCommandType(command: Command, job: Job) -> str:
     assert isinstance(job, Job)
     # detect type of cmake command
     cmakeCommand = "configure"
@@ -19,13 +20,12 @@ def createCmakeFileName(command: Command, job: Job) -> str:
         cmakeCommand = "build"
     elif '--install' in command.cmd:
         cmakeCommand = 'install'
-    fileName = f'cmake_{cmakeCommand}.json'
-    return fileName
+    return cmakeCommand
 
 
 class JsonCommandExporter(EventHandlerExtensionPoint):
     """
-    Exports cmake commands: :py:class:`colcon_core.event.command.Command` as json to log dir
+    Exports cmake commands as json to log dir
     """
 
     # this handler is disabled by default
@@ -45,14 +45,8 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
 
         job: Job = event[1]
 
-        # workout export file name
-        if job.task.PACKAGE_TYPE == 'cmake':
-            fileName = createCmakeFileName(command, job)
-        else:
-            fileName = datetime.now().strftime("command_%Y_%m_%d-%H:%M:%S.%f.json")
-
         # full file path
-        filePath = self.getProjectLogFilePath(job) / fileName
+        filePath = self.getFileName(job, command)
 
         # convert Command to dictionary for json dump
         jDict = {slot: getattr(command, slot) for slot in command.__slots__}
@@ -60,12 +54,28 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
         with open(filePath, 'w') as f:
             json.dump(jDict, f, indent=4)
 
-    def getProjectLogFilePath(self, job):
-        # make sure base log path exists
-        create_log_path(self.context.args.verb_name)
+    def getFileName(self, job: Job, command: Command) -> Path:
 
-        # lets put the files in per project dir
-        base_path = get_log_path() / job.identifier
-        os.makedirs(str(base_path), exist_ok=True)
+        if job.task.PACKAGE_TYPE == 'cmake':
+            filePart: str = deduceCmakeCommandType(command, job)
+        else:
+            filePart: str = datetime.now().strftime("%Y_%m_%d-%H:%M:%S.%f")
 
-        return base_path
+        envPath = os.getenv('CMAKE_COMMAND_EXPORT_PATH')
+
+        if envPath is not None:
+            path = Path(envPath.strip(' '))
+            os.makedirs(str(path), exist_ok=True)
+            path /= f'{job.identifier}_command_{filePart}.json'
+
+        else:
+            # make sure base log path exists
+            create_log_path(self.context.args.verb_name)
+
+            # lets put the files in per project dir
+            path = get_log_path() / job.identifier
+            os.makedirs(str(path), exist_ok=True)
+
+            path = path / f'command_{filePart}.json'
+
+        return path
