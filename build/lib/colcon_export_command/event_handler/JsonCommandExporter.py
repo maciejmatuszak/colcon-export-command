@@ -40,12 +40,7 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
     def __init__(self):  # noqa: D107
         super().__init__()
         satisfies_version(EventHandlerExtensionPoint.EXTENSION_POINT_VERSION, '^1.0')
-
-        envPath = os.getenv(COLCON_COMMAND_EXPORT_PATH_ENVIRONMENT_VARIABLE.name)
-        if envPath is not None:
-            self.enabled = True
-        else:
-            self.enabled = JsonCommandExporter.ENABLED_BY_DEFAULT
+        self.enabled = JsonCommandExporter.ENABLED_BY_DEFAULT
 
     def __call__(self, event):  # noqa: D102
         command = event[0]
@@ -63,6 +58,8 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
         jDict = {slot: getattr(command, slot) for slot in command.__slots__}
 
         with open(filePath, 'w') as f:
+            print(f'exporting command to : {filePath}', file=sys.stderr, flush=True)
+            # logger.warning(f'exporting command to : {filePath}')
             json.dump(jDict, f, indent=4)
 
     def getFileName(self, job: Job, command: Command) -> Path:
