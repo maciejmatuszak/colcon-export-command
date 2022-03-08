@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeSharedSettings">
+    <configurations>
+      <configuration
+              PROFILE_NAME="test_config"
+              ENABLED="true"
+              GENERATION_DIR="build_rir_name"
+              CONFIG_NAME="RelWithDebInfo"
+              TOOLCHAIN_NAME="system_tools GCC-9"
+              GENERATION_OPTIONS="-DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_STANDARD_REQUIRED=YES --no-warn-unused-cli"
+              GENERATION_PASS_SYSTEM_ENVIRONMENT="false"
+              BUILD_OPTIONS="-- -j 9 build options">
+        <ADDITIONAL_GENERATION_ENVIRONMENT>
+          <envs>
+            <env name="VAR1" value="val1" />
+            <env name="VAR2" value="val2" />
+          </envs>
+        </ADDITIONAL_GENERATION_ENVIRONMENT>
+      </configuration>
+      <configuration
+              PROFILE_NAME="test_config2"
+              ENABLED="true"
+              GENERATION_DIR="build_rir_name"
+              CONFIG_NAME="RelWithDebInfo"
+              TOOLCHAIN_NAME="system_tools GCC-9"
+              GENERATION_OPTIONS="-DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_STANDARD_REQUIRED=YES --no-warn-unused-cli"
+              GENERATION_PASS_SYSTEM_ENVIRONMENT="false"
+              BUILD_OPTIONS="-- -j 9 build options">
+        <ADDITIONAL_GENERATION_ENVIRONMENT>
+          <envs>
+            <env name="VAR1" value="val1" />
+            <env name="VAR2" value="val2" />
+          </envs>
+        </ADDITIONAL_GENERATION_ENVIRONMENT>
+      </configuration>
+    </configurations>
+  </component>
+</project>

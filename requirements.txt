@@ -1,0 +1,2 @@
+setuptools~=45.2.0
+xsdata~=22.2
