@@ -19,8 +19,12 @@ from xsdata.formats.dataclass.parsers import XmlParser
 from xsdata.formats.dataclass.serializers import XmlSerializer
 from xsdata.formats.dataclass.serializers.config import SerializerConfig
 
-from colcon_export_command.event_handler import COLCON_COMMAND_EXPORT_PATH_ENVIRONMENT_VARIABLE, \
-    COLCON_COMMAND_EXPORT_JETBRAIN_ENVIRONMENT_VARIABLE, COLCON_COMMAND_EXPORT_JETBRAIN_ENV_VARS_ENVIRONMENT_VARIABLE
+from colcon_export_command.event_handler import EV_COLCON_COMMAND_EXPORT_PATH, \
+    EV_COLCON_COMMAND_EXPORT_CLION, EV_COLCON_COMMAND_EXPORT_CLION_ENV_VARS, \
+    EV_COLCON_COMMAND_EXPORT_CLION_BUILD_OPTIONS, EV_COLCON_COMMAND_EXPORT_CLION_TOOLCHAIN, \
+    EV_COLCON_COMMAND_EXPORT_CLION_BUILD_TYPE, \
+    EV_COLCON_COMMAND_EXPORT_CLION_PASS_SHELL_ENV, EV_COLCON_COMMAND_EXPORT_CLION_PROFILE_ENABLED, \
+    EV_COLCON_COMMAND_EXPORT_CLION_PROFILE_NAME
 from colcon_export_command.xml.models import Project, Configuration, AdditionalGenerationEnvironment, Envs, Env, \
     Component, Configurations
 
@@ -73,11 +77,27 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
         satisfies_version(EventHandlerExtensionPoint.EXTENSION_POINT_VERSION, '^1.0')
         self.ignoreEnvVariables = ['_', 'SHELL', 'PWD']
 
-        self.exportPath: Optional[str] = os.getenv(COLCON_COMMAND_EXPORT_PATH_ENVIRONMENT_VARIABLE.name)
-        self.jetBrainExport: bool = bool(os.getenv(COLCON_COMMAND_EXPORT_JETBRAIN_ENVIRONMENT_VARIABLE.name))
+        self.exportPath: Optional[str] = os.getenv(
+                EV_COLCON_COMMAND_EXPORT_PATH.name)
+
+        self.clionDefaultProfileEnable: bool = bool(os.getenv(
+                EV_COLCON_COMMAND_EXPORT_CLION_PROFILE_ENABLED.name, "True"))
+        self.clionDefaultProfileName: str = os.getenv(
+                EV_COLCON_COMMAND_EXPORT_CLION_PROFILE_NAME.name, 'colcon')
+        self.clionDefaultBuildOptions: str = os.getenv(
+                EV_COLCON_COMMAND_EXPORT_CLION_BUILD_OPTIONS.name, f'-- -j {os.cpu_count() - 1}')
+        self.clionDefaultToolChain: str = os.getenv(
+                EV_COLCON_COMMAND_EXPORT_CLION_TOOLCHAIN.name, "Default")
+        self.clionDefaultCmakeBuildType: str = os.getenv(
+                EV_COLCON_COMMAND_EXPORT_CLION_BUILD_TYPE.name, "RelWithDebInfo")
+
+        self.clionDefaultPassShellEnv: bool = bool(os.getenv(
+                EV_COLCON_COMMAND_EXPORT_CLION_PASS_SHELL_ENV.name, "False"))
+
+        self.jetBrainExport: bool = bool(os.getenv(EV_COLCON_COMMAND_EXPORT_CLION.name))
 
         # setup selective export variables if available
-        temp = os.getenv(COLCON_COMMAND_EXPORT_JETBRAIN_ENV_VARS_ENVIRONMENT_VARIABLE.name, None)
+        temp = os.getenv(EV_COLCON_COMMAND_EXPORT_CLION_ENV_VARS.name, None)
         if temp:
             self.jetBrainExportVariables = re.split(':|;|,| ', temp)
             self.jetBrainExportVariables = [it for it in self.jetBrainExportVariables if it]
@@ -111,11 +131,17 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
         if cmakeVerb == 'configure':
 
             configOpptions = []
-            srcDir = None
+            srcDir: Optional[str] = None
+            buildType: Optional[str] = None
             # parse the command elements
             for item in command.cmd:
+                item: str
                 # cmake commandline
                 if item == 'cmake':
+                    continue
+                res = re.search(r'-DCMAKE_BUILD_TYPE=([\w_\-+]+)', item)
+                if res:
+                    buildType = res.group(1)
                     continue
                 # cmake commandline - full path
                 if str(item).endswith('cmake') and isExistingFile(item):
@@ -130,11 +156,12 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
             if ideaPath.exists():
                 cmakeXmlPath = ideaPath / 'cmake.xml'
 
-                profileEnabled = True
-                configName = 'RelWithDebInfo'
-                toolChainName = 'Default'
-                passSystemEnv = False
-                buildOptions = ''
+                clionProfileEnable = self.clionDefaultProfileEnable
+                clionCmakeBuildType = buildType or self.clionDefaultCmakeBuildType
+                clionProfileName = f'{self.clionDefaultProfileName}_{clionCmakeBuildType}'
+                clionToolChain = self.clionDefaultToolChain
+                clionPassShellEnv = self.clionDefaultPassShellEnv
+                clionBuildOptions = self.clionDefaultBuildOptions
 
                 if cmakeXmlPath.exists():
                     # load and update
@@ -142,20 +169,20 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
                     projectToSave = parser.parse(str(cmakeXmlPath), Project)
 
                     temp = [cfg for cfg in projectToSave.component.configurations.configuration
-                            if cfg.profile_name == 'colcon']
+                            if cfg.profile_name == clionProfileName]
                     if temp:
                         oldConfig = temp[0]
-                        configName = oldConfig.config_name
-                        toolChainName = oldConfig.toolchain_name
-                        profileEnabled = oldConfig.enabled
-                        passSystemEnv = oldConfig.generation_pass_system_environment
-                        buildOptions = oldConfig.build_options
+                        clionCmakeBuildType = oldConfig.config_name
+                        clionToolChain = oldConfig.toolchain_name
+                        clionProfileEnable = oldConfig.enabled
+                        clionPassShellEnv = oldConfig.generation_pass_system_environment
+                        clionBuildOptions = oldConfig.build_options
 
                     # remove existing
                     projectToSave.component.configurations.configuration = [
                         cfg for cfg in
                         projectToSave.component.configurations.configuration
-                        if cfg.profile_name != 'colcon']
+                        if cfg.profile_name != clionProfileName]
 
                 else:
                     projectToSave = Project(version=4,
@@ -172,14 +199,18 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
                     else:
                         envs.env.append(Env(name=envKey, value=envVal))
 
-                config = Configuration(profile_name='colcon',
-                                       enabled=profileEnabled,
+                configOptionsStr = ' '.join(configOpptions)
+                configOptionsStr = re.sub(r'-DCMAKE_BUILD_TYPE=[\w_\-+]+',
+                                          f'-DCMAKE_BUILD_TYPE={clionCmakeBuildType}', configOptionsStr)
+
+                config = Configuration(profile_name=clionProfileName,
+                                       enabled=clionProfileEnable,
                                        generation_dir=command.cwd,
-                                       config_name=configName,
-                                       toolchain_name=toolChainName,
-                                       generation_options=' '.join(configOpptions),
-                                       generation_pass_system_environment=passSystemEnv,
-                                       build_options=buildOptions,
+                                       config_name=clionCmakeBuildType,
+                                       toolchain_name=clionToolChain,
+                                       generation_options=configOptionsStr,
+                                       generation_pass_system_environment=clionPassShellEnv,
+                                       build_options=clionBuildOptions,
                                        additional_generation_environment=AdditionalGenerationEnvironment(
                                                envs))
                 projectToSave.component.configurations.configuration.append(config)

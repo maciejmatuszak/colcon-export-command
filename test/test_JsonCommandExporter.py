@@ -7,8 +7,8 @@ from unittest import TestCase, mock
 from colcon_core.event.command import Command
 from colcon_core.executor import Job
 
-from colcon_export_command.event_handler import COLCON_COMMAND_EXPORT_PATH_ENVIRONMENT_VARIABLE, \
-    COLCON_COMMAND_EXPORT_JETBRAIN_ENVIRONMENT_VARIABLE
+from colcon_export_command.event_handler import EV_COLCON_COMMAND_EXPORT_PATH, \
+    EV_COLCON_COMMAND_EXPORT_CLION
 from colcon_export_command.event_handler.JsonCommandExporter import JsonCommandExporter
 
 testCommandFile = Path(__file__).parent / 'command_configure.json'
@@ -36,8 +36,8 @@ class TestJsonCommandExporter(TestCase):
         self.tempDir = TemporaryDirectory()
 
         self.envPatcher = mock.patch.dict(os.environ, {
-            COLCON_COMMAND_EXPORT_PATH_ENVIRONMENT_VARIABLE.name: self.tempDir.name,
-            COLCON_COMMAND_EXPORT_JETBRAIN_ENVIRONMENT_VARIABLE.name: 'True'})
+            EV_COLCON_COMMAND_EXPORT_PATH.name: self.tempDir.name,
+            EV_COLCON_COMMAND_EXPORT_CLION.name: 'True'})
         self.envPatcher.start()
         self.tempDirPath = Path(self.tempDir.name)
         self.testSourceDir = self.tempDirPath / 'src'
@@ -46,6 +46,7 @@ class TestJsonCommandExporter(TestCase):
                 cmd=[
                     'cmake',
                     str(self.testSourceDir),
+                    '-DCMAKE_BUILD_TYPE=Debug',
                     '-DCMAKE_CXX_STANDARD=17',
                     '-DCMAKE_CXX_STANDARD_REQUIRED=YES',
                     '-DCMAKE_DEBUG_POSTFIX=d'],
