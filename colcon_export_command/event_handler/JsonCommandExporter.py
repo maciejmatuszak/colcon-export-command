@@ -81,25 +81,25 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
                 EV_COLCON_COMMAND_EXPORT_PATH.name)
 
         self.clionDefaultProfileEnable: bool = bool(os.getenv(
-                EV_COLCON_COMMAND_EXPORT_CLION_PROFILE_ENABLED.name, "True"))
+                EV_COLCON_COMMAND_EXPORT_CLION_PROFILE_ENABLED.name, 'True'))
         self.clionDefaultProfileName: str = os.getenv(
                 EV_COLCON_COMMAND_EXPORT_CLION_PROFILE_NAME.name, 'colcon')
         self.clionDefaultBuildOptions: str = os.getenv(
                 EV_COLCON_COMMAND_EXPORT_CLION_BUILD_OPTIONS.name, f'-- -j {os.cpu_count() - 1}')
         self.clionDefaultToolChain: str = os.getenv(
-                EV_COLCON_COMMAND_EXPORT_CLION_TOOLCHAIN.name, "Default")
+                EV_COLCON_COMMAND_EXPORT_CLION_TOOLCHAIN.name, 'Default')
         self.clionDefaultCmakeBuildType: str = os.getenv(
-                EV_COLCON_COMMAND_EXPORT_CLION_BUILD_TYPE.name, "RelWithDebInfo")
+                EV_COLCON_COMMAND_EXPORT_CLION_BUILD_TYPE.name, 'RelWithDebInfo')
 
         self.clionDefaultPassShellEnv: bool = bool(os.getenv(
-                EV_COLCON_COMMAND_EXPORT_CLION_PASS_SHELL_ENV.name, "False"))
+                EV_COLCON_COMMAND_EXPORT_CLION_PASS_SHELL_ENV.name, 'False').lower() == 'true')
 
         self.jetBrainExport: bool = bool(os.getenv(EV_COLCON_COMMAND_EXPORT_CLION.name))
 
         # setup selective export variables if available
         temp = os.getenv(EV_COLCON_COMMAND_EXPORT_CLION_ENV_VARS.name, None)
         if temp:
-            self.jetBrainExportVariables = re.split(':|;|,| ', temp)
+            self.jetBrainExportVariables = re.split('[:;, ]', temp)
             self.jetBrainExportVariables = [it for it in self.jetBrainExportVariables if it]
             self.jetBrainExport = True
         else:
@@ -134,23 +134,23 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
             srcDir: Optional[str] = None
             buildType: Optional[str] = None
             # parse the command elements
-            for item in command.cmd:
-                item: str
+            for command_item in command.cmd:
+                command_item: str
                 # cmake commandline
-                if item == 'cmake':
+                if command_item == 'cmake':
                     continue
-                res = re.search(r'-DCMAKE_BUILD_TYPE=([\w_\-+]+)', item)
+                res = re.search(r'-DCMAKE_BUILD_TYPE=([\w_\-+]+)', command_item)
                 if res:
                     buildType = res.group(1)
                     continue
                 # cmake commandline - full path
-                if str(item).endswith('cmake') and isExistingFile(item):
+                if str(command_item).endswith('cmake') and isExistingFile(command_item):
                     continue
                 # usually second item in command is source dir
-                if not isCmdOption(item) and isExistingDir(item):
-                    srcDir = item
+                if not isCmdOption(command_item) and isExistingDir(command_item):
+                    srcDir = command_item
                     continue
-                configOpptions.append(item)
+                configOpptions.append(command_item)
             srcDirPath = Path(srcDir)
             ideaPath = srcDirPath / '.idea'
             if ideaPath.exists():
@@ -170,6 +170,7 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
 
                     temp = [cfg for cfg in projectToSave.component.configurations.configuration
                             if cfg.profile_name == clionProfileName]
+                    # profile with name==clionProfileName exists
                     if temp:
                         oldConfig = temp[0]
                         clionCmakeBuildType = oldConfig.config_name
