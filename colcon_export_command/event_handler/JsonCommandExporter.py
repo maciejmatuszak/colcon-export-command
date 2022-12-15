@@ -78,21 +78,21 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
         self.ignoreEnvVariables = ['_', 'SHELL', 'PWD']
 
         self.exportPath: Optional[str] = os.getenv(
-                EV_COLCON_COMMAND_EXPORT_PATH.name)
+            EV_COLCON_COMMAND_EXPORT_PATH.name)
 
         self.clionDefaultProfileEnable: bool = bool(os.getenv(
-                EV_COLCON_COMMAND_EXPORT_CLION_PROFILE_ENABLED.name, 'True'))
+            EV_COLCON_COMMAND_EXPORT_CLION_PROFILE_ENABLED.name, 'True'))
         self.clionDefaultProfileName: str = os.getenv(
-                EV_COLCON_COMMAND_EXPORT_CLION_PROFILE_NAME.name, 'colcon')
+            EV_COLCON_COMMAND_EXPORT_CLION_PROFILE_NAME.name, 'colcon')
         self.clionDefaultBuildOptions: str = os.getenv(
-                EV_COLCON_COMMAND_EXPORT_CLION_BUILD_OPTIONS.name, f'-- -j {os.cpu_count() - 1}')
+            EV_COLCON_COMMAND_EXPORT_CLION_BUILD_OPTIONS.name, f'-- -j {os.cpu_count() - 1}')
         self.clionDefaultToolChain: str = os.getenv(
-                EV_COLCON_COMMAND_EXPORT_CLION_TOOLCHAIN.name, 'Default')
+            EV_COLCON_COMMAND_EXPORT_CLION_TOOLCHAIN.name, 'Default')
         self.clionDefaultCmakeBuildType: str = os.getenv(
-                EV_COLCON_COMMAND_EXPORT_CLION_BUILD_TYPE.name, 'RelWithDebInfo')
+            EV_COLCON_COMMAND_EXPORT_CLION_BUILD_TYPE.name, 'RelWithDebInfo')
 
         self.clionDefaultPassShellEnv: bool = bool(os.getenv(
-                EV_COLCON_COMMAND_EXPORT_CLION_PASS_SHELL_ENV.name, 'False').lower() == 'true')
+            EV_COLCON_COMMAND_EXPORT_CLION_PASS_SHELL_ENV.name, 'False').lower() == 'true')
 
         self.jetBrainExport: bool = bool(os.getenv(EV_COLCON_COMMAND_EXPORT_CLION.name))
 
@@ -212,8 +212,7 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
                                        generation_options=configOptionsStr,
                                        generation_pass_system_environment=clionPassShellEnv,
                                        build_options=clionBuildOptions,
-                                       additional_generation_environment=AdditionalGenerationEnvironment(
-                                               envs))
+                                       additional_generation_environment=AdditionalGenerationEnvironment(envs))
                 projectToSave.component.configurations.configuration.append(config)
 
                 serializerCfg = SerializerConfig(pretty_print=True)
