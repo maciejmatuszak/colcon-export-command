@@ -119,6 +119,9 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
 
         job: Job = event[1]
 
+        if not self.isCmakeCommand(command):
+            return
+
         self.exportJsonCommand(command, job)
 
         self.exportClionCmakeSettings(command)
@@ -255,3 +258,7 @@ class JsonCommandExporter(EventHandlerExtensionPoint):
             path = path / f'command_{filePart}.json'
 
         return path
+
+    def isCmakeCommand(self, command) -> bool:
+        executable: str = command.cmd[0]
+        return executable.endswith('cmake')
